@@ -1,0 +1,43 @@
+---
+title: "Election Project"
+output: html_notebook
+---
+
+# Data Mashing
+```{r}
+library(XML)
+library(ggplot2)
+```
+
+## Trump votes and Clinton votes from 2016
+
+```{r}
+counties2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
+counties2016 = counties2016[, c("votes_dem", "votes_gop", "state_abbr", "county_name")]
+names(counties2016)[names(counties2016) == "votes_dem"] <- "Clinton votes 2016"
+names(counties2016)[names(counties2016) == "votes_gop"] <- "Trump votes 2016"
+```
+
+## Obama votes and Romney votes from 2012
+
+```{r}
+stateNames = scan("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2012/stateNames.txt", what=character(), skip=1)
+stateNames = stateNames[!stateNames %in% c("alaska")]
+
+
+counties2012 = c()
+
+loadXML = function(stateName) {
+  link2012 = "http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/"
+  fullLink = paste0(link2012, stateName, ".xml")
+  xmlData = xmlParse(fullLink)
+  root = xmlRoot(xmlData)
+  demVotes = as.numeric(gsub(",", "", xpathApply(root, "//tbody/tr[contains(concat(' ', @class, ' '), ' party-democrat ')]/td[@class='results-popular']", xmlValue), "[,[:digit:]]+"))
+  repubVotes = as.numeric(gsub(",", "", xpathApply(root, "//tbody/tr[contains(concat(' ', @class, ' '), ' party-republican ')]/td[@class='results-popular']", xmlValue), "[,[:digit:]]+"))
+  countyName = sapply(xpathApply(root, "//tbody/tr/th[@class='results-county']", xmlValue), FUN = function(x) {return(unlist(strsplit(x, " "))[1])})
+  counties2012 = c(counties2012, c(stateName, countyName, demVotes, repubVotes))
+}
+
+xmlData = sapply(stateNames, loadXML)
+
+```
